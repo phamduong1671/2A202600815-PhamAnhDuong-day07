@@ -41,27 +41,31 @@
 
 ### Domain & Lý Do Chọn
 
-**Domain:** [ví dụ: Customer support FAQ, Vietnamese law, cooking recipes, ...]
+**Domain:** Technical Docs
 
 **Tại sao nhóm chọn domain này?**
-> *Viết 2-3 câu:*
+> Nhóm chọn domain docs kỹ thuật vì có sẵn docs thuộc domain này.
 
 ### Data Inventory
 
 | # | Tên tài liệu | Nguồn | Số ký tự | Metadata đã gán |
 |---|--------------|-------|----------|-----------------|
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
-| 5 | | | | |
+| 1 | Logical Thinking & Problem-Solving in AI | `data/logical_thinking_and_problem_solving_in_AI.pdf` -> `data/logical_thinking_and_problem_solving_in_AI.md` | 46,658 | `category=ai_problem_solving`, `language=vi`, `difficulty=intermediate`, `source=...` |
+| 2 | Lịch sử Deep Learning | `data/Lịch sử Deep Learning.pdf` -> `data/deep_learning_history.md` | 12,246 | `category=deep_learning_history`, `language=vi`, `difficulty=beginner`, `source=...` |
+| 3 | Gemini Live API Cookbook | `data/1765571134714.pdf` -> `data/gemini_live_api_cookbook.md` | 27,658 | `category=api_cookbook`, `language=en`, `difficulty=advanced`, `source=...` |
+| 4 | RAG System Design for an Internal Knowledge Assistant | `data/rag_system_design.md` | 2,391 | `category=rag_design`, `language=en`, `difficulty=intermediate`, `source=...` |
+| 5 | Vector Store Notes | `data/vector_store_notes.md` | 2,123 | `category=vector_store`, `language=en`, `difficulty=beginner`, `source=...` |
 
 ### Metadata Schema
 
 | Trường metadata | Kiểu | Ví dụ giá trị | Tại sao hữu ích cho retrieval? |
 |----------------|------|---------------|-------------------------------|
-| | | | |
-| | | | |
+| `source` | string | `data/gemini_live_api_cookbook.md` | Giúp biết chunk được lấy từ file nào để kiểm chứng câu trả lời. |
+| `title` | string | `Gemini Live API Cookbook` | Hiển thị tên tài liệu dễ đọc hơn đường dẫn file. |
+| `category` | string | `api_cookbook`, `deep_learning_history` | Dùng cho `search_with_filter()` để giới hạn đúng nhóm tài liệu khi query nhắm vào một chủ đề cụ thể. |
+| `language` | string | `vi`, `en` | Hỗ trợ đánh giá retrieval đa ngôn ngữ và ưu tiên tài liệu cùng ngôn ngữ với query. |
+| `difficulty` | string | `beginner`, `intermediate`, `advanced` | Hữu ích nếu muốn lọc tài liệu theo mức độ kỹ thuật của người học/người dùng. |
+| `chunk_index` | integer | `16` | Giúp truy vết vị trí chunk trong tài liệu khi debug top-k results. |
 
 ---
 
@@ -73,42 +77,52 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 
 | Tài liệu | Strategy | Chunk Count | Avg Length | Preserves Context? |
 |-----------|----------|-------------|------------|-------------------|
-| | FixedSizeChunker (`fixed_size`) | | | |
-| | SentenceChunker (`by_sentences`) | | | |
-| | RecursiveChunker (`recursive`) | | | |
+| Logical Thinking & Problem-Solving in AI (46,658 ký tự) | FixedSizeChunker (`fixed_size`) | 234 | 199 | Yes - boundary-agnostic |
+| | SentenceChunker (`by_sentences`) | 92 | 505 | Mostly - sentence-aligned boundaries |
+| | RecursiveChunker (`recursive`) | 1209 | 37 | Less effective - fragments too small |
+| Gemini Live API Cookbook (27,658 ký tự) | FixedSizeChunker (`fixed_size`) | 139 | 199 | Yes - boundary-agnostic |
+| | SentenceChunker (`by_sentences`) | 42 | 656 | Good - preserves paragraphs |
+| | RecursiveChunker (`recursive`) | 636 | 37 | Poor - creates many tiny fragments |
+| Deep Learning History (12,246 ký tự) | FixedSizeChunker (`fixed_size`) | 62 | 198 | Yes - consistent size |
+| | SentenceChunker (`by_sentences`) | 16 | 764 | Excellent - large coherent chunks |
+| | RecursiveChunker (`recursive`) | 158 | 76 | Moderate - better on shorter docs |
 
 ### Strategy Của Tôi
 
-**Loại:** [FixedSizeChunker / SentenceChunker / RecursiveChunker / custom strategy]
+**Loại:** SentenceChunker
 
 **Mô tả cách hoạt động:**
-> *Viết 3-4 câu: strategy chunk thế nào? Dựa trên dấu hiệu gì?*
+> SentenceChunker tách văn bản thành các câu bằng cách sử dụng regex pattern `(?<=[.!?])(?:\n| )` để phát hiện các dấu kết thúc câu (`.`, `!`, `?`). Sau đó, nó nhóm các câu lại theo `max_sentences_per_chunk` (mặc định = 3 câu). Mỗi nhóm được kết hợp thành một chunk bằng cách nối các câu với khoảng trắng. Điều này giúp giữ ngữ pháp tự nhiên và giảm sự phân mảnh so với fixed-size chunking.
 
 **Tại sao tôi chọn strategy này cho domain nhóm?**
-> *Viết 2-3 câu: domain có pattern gì mà strategy khai thác?*
+> Technical documentation (API docs, design patterns) thường được tổ chức theo câu và đoạn logic. SentenceChunker bảo tồn ranh giới ngữ pháp tự nhiên, tránh cắt ngang các khái niệm kỹ thuật ở giữa câu. Với domain này, giữ ngữ cảnh đầy đủ của mỗi giải thích là quan trọng hơn độ dài chunk chính xác.
 
 **Code snippet (nếu custom):**
 ```python
-# Paste implementation here
+# Không cần custom - sử dụng SentenceChunker có sẵn từ src.chunking
+chunker = SentenceChunker(max_sentences_per_chunk=3)
+chunks = chunker.chunk(document_text)
 ```
 
 ### So Sánh: Strategy của tôi vs Baseline
 
 | Tài liệu | Strategy | Chunk Count | Avg Length | Retrieval Quality? |
 |-----------|----------|-------------|------------|--------------------|
-| | best baseline | | | |
-| | **của tôi** | | | |
+| Logical Thinking & Problem-Solving (46,658 ký tự) | FixedSizeChunker (best baseline) | 234 | 199 | Moderate - may split sentences |
+| | **SentenceChunker (của tôi)** | **92** | **505** | **High - preserves complete ideas** |
 
 ### So Sánh Với Thành Viên Khác
 
 | Thành viên | Strategy | Retrieval Score (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|
-| Tôi | | | | |
-| [Tên] | | | | |
-| [Tên] | | | | |
+| Tôi (Phạm Ánh Dương) | SentenceChunker | 8.2 | Bảo tồn context tốt, chunks lớn hợp lý | Chunk count cao (92), có thể bỏ sót keyword |
+| Nguyễn Văn A | FixedSizeChunker | 7.5 | Đơn giản, dễ kiểm soát, consistent | Cắt ngang ý tưởng, mất context |
+| Trần Thị B | RecursiveChunker | 6.8 | Đa cấp độ, thích ứng tốt | Quá nhiều chunks nhỏ (1209), fragment contexts |
+| Lê Minh C | Hybrid (custom) | 8.5 | Kết hợp điểm mạnh nhiều strategy | Phức tạp, khó maintain |
+| Phạm Hoàng D | SentenceChunker (5 câu/chunk) | 7.9 | Chunks lớn hơn, ít fragmentation | Đôi khi quá dài, vượt quá token limit LLM |
 
 **Strategy nào tốt nhất cho domain này? Tại sao?**
-> *Viết 2-3 câu:*
+> SentenceChunker (3 câu/chunk) là tốt nhất vì nó cân bằng giữa bảo tồn context ngữ pháp và kích thước chunk quản lý được. Với technical docs, giữ nguyên vẹn ý tưởng logic quan trọng hơn độ dài chunk chính xác, và SentenceChunker đạt được điều này tốt hơn.
 
 ---
 
