@@ -109,20 +109,19 @@ chunks = chunker.chunk(document_text)
 | Tài liệu | Strategy | Chunk Count | Avg Length | Retrieval Quality? |
 |-----------|----------|-------------|------------|--------------------|
 | Logical Thinking & Problem-Solving (46,658 ký tự) | FixedSizeChunker (best baseline) | 234 | 199 | Moderate - may split sentences |
-| | **SentenceChunker (của tôi)** | **92** | **505** | **High - preserves complete ideas** |
+| | **SentenceChunker** | **92** | **505** | **High - preserves complete ideas** |
 
 ### So Sánh Với Thành Viên Khác
 
 | Thành viên | Strategy | Retrieval Score (/10) | Điểm mạnh | Điểm yếu |
 |-----------|----------|----------------------|-----------|----------|
-| Tôi (Phạm Ánh Dương) | SentenceChunker | 8.2 | Bảo tồn context tốt, chunks lớn hợp lý | Chunk count cao (92), có thể bỏ sót keyword |
-| Nguyễn Văn A | FixedSizeChunker | 7.5 | Đơn giản, dễ kiểm soát, consistent | Cắt ngang ý tưởng, mất context |
-| Trần Thị B | RecursiveChunker | 6.8 | Đa cấp độ, thích ứng tốt | Quá nhiều chunks nhỏ (1209), fragment contexts |
-| Lê Minh C | Hybrid (custom) | 8.5 | Kết hợp điểm mạnh nhiều strategy | Phức tạp, khó maintain |
-| Phạm Hoàng D | SentenceChunker (5 câu/chunk) | 7.9 | Chunks lớn hơn, ít fragmentation | Đôi khi quá dài, vượt quá token limit LLM |
+| Phạm Ánh Dương | Fixed-size chunking (`chunk_size=800`, `overlap=100`) | 7/10 | Dễ triển khai, số chunk ổn định, overlap giúp không mất thông tin ở ranh giới chunk. | Có thể cắt ngang heading, bullet hoặc code block; retrieval dễ nhiễu khi tài liệu có cấu trúc section rõ. |
+| Hoàng Văn Anh | Header-aware + metadata filter | 9/10 | Giữ tốt cấu trúc Markdown heading/section, top-3 có relevant chunk 5/5 queries. | Query feature list của Live API có top-1 là overview, feature list nằm top-2. |
+| Nguyễn Trường Giang | Recursive chunking (`chunk_size=700`) + metadata filter | 8/10 | Cân bằng tốt giữa độ dài chunk và ngữ cảnh; phù hợp với tài liệu Markdown có nhiều đoạn văn dài. | Một số chunk vẫn gom nhiều heading/ý khác nhau, nên câu hỏi chi tiết đôi khi relevant chunk không ở top-1. |
+| Nguyễn Lý Minh Kỳ | Sentence chunking (`max_sentences_per_chunk=4`) + category filter | 7.5/10 | Giữ câu tự nhiên, dễ đọc, hoạt động khá tốt với tài liệu tiếng Việt dạng giải thích. | Với docs API có bullet/code block, ranh giới câu không đủ tốt; một số chunk quá ngắn nên thiếu ngữ cảnh để agent trả lời đầy đủ. |
 
 **Strategy nào tốt nhất cho domain này? Tại sao?**
-> SentenceChunker (3 câu/chunk) là tốt nhất vì nó cân bằng giữa bảo tồn context ngữ pháp và kích thước chunk quản lý được. Với technical docs, giữ nguyên vẹn ý tưởng logic quan trọng hơn độ dài chunk chính xác, và SentenceChunker đạt được điều này tốt hơn.
+> Với bộ docs kỹ thuật này, header-aware chunking là strategy tốt nhất vì nó giữ ranh giới tự nhiên của tài liệu: heading, section, step, model và case study. Metadata filter cũng giúp tăng độ chính xác, ví dụ `category=api_cookbook` cho câu hỏi về Gemini Live API hoặc `category=deep_learning_history` cho câu hỏi về Transformer.
 
 ---
 
