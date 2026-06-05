@@ -98,11 +98,7 @@ Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
 > Technical documentation (API docs, design patterns) thường được tổ chức theo câu và đoạn logic. SentenceChunker bảo tồn ranh giới ngữ pháp tự nhiên, tránh cắt ngang các khái niệm kỹ thuật ở giữa câu. Với domain này, giữ ngữ cảnh đầy đủ của mỗi giải thích là quan trọng hơn độ dài chunk chính xác.
 
 **Code snippet (nếu custom):**
-```python
-# Không cần custom - sử dụng SentenceChunker có sẵn từ src.chunking
-chunker = SentenceChunker(max_sentences_per_chunk=3)
-chunks = chunker.chunk(document_text)
-```
+
 
 ### So Sánh: Strategy của tôi vs Baseline
 
