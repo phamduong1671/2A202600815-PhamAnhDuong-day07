@@ -27,6 +27,15 @@ SAMPLE_FILES = [
     "data/vi_retrieval_notes.md",
 ]
 
+SAMPLE_FILES = [
+    "data/python_intro.txt",
+    "data/vector_store_notes.md",
+    "data/rag_system_design.md",
+    "data/customer_support_playbook.txt",
+    "data/chunking_experiment_report.md",
+    "data/vi_retrieval_notes.md",
+]
+
 
 def load_documents_from_files(file_paths: list[str]) -> list[Document]:
     """Load documents from file paths for the manual demo."""

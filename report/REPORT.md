@@ -1,7 +1,7 @@
 # Báo Cáo Lab 7: Embedding & Vector Store
 
-**Họ tên:** [Tên sinh viên]
-**Nhóm:** [Tên nhóm]
+**Họ tên:** Phạm Ánh Dương
+**Nhóm:** Ngũ hổ tướng
 **Ngày:** [Ngày nộp]
 
 ---
@@ -11,20 +11,20 @@
 ### Cosine Similarity (Ex 1.1)
 
 **High cosine similarity nghĩa là gì?**
-> *Viết 1-2 câu:*
+> High cosine similarity là mức độ giống nhau về hướng của 2 vector embedding, tức là 2 phần được embedding có ngữ nghĩa gần nhau.
 
 **Ví dụ HIGH similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao tương đồng:
+- Sentence A: Điểm chuẩn đại học Ngoại Thương năm nay là bao nhiều?
+- Sentence B: Điểm chuẩn của đại học Ngoại Thương năm 2026 là 27 điểm.
+- Tại sao tương đồng: 2 câu này nói về cùng 1 chủ đề điểm chuẩn của cùng đối tượng là trường đại học Thương Mại
 
 **Ví dụ LOW similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao khác:
+- Sentence A: Điểm chuẩn đại học Ngoại Thương năm nay là bao nhiều?
+- Sentence B: Trận đầu đầu tiên world cup diễn ra lúc rạng sáng ngày 12/6 theo giờ Việt Nam
+- Tại sao khác: không có chủ đề, đối tượng chung.
 
 **Tại sao cosine similarity được ưu tiên hơn Euclidean distance cho text embeddings?**
-> *Viết 1-2 câu:*
+> cosine similarity giúp so sánh về hướng vector, không phụ thuộc độ dài vector (=> thấy được độ tương đồng về ngữ nghĩa). Còn Euclidean distance được tính toán dựa trên độ dài của các vector nên dù nghĩa có gần nhau cũng dễ bị đánh giá sai.
 
 ### Chunking Math (Ex 1.2)
 
@@ -119,31 +119,81 @@ Giải thích cách tiếp cận của bạn khi implement các phần chính tr
 ### Chunking Functions
 
 **`SentenceChunker.chunk`** — approach:
-> *Viết 2-3 câu: dùng regex gì để detect sentence? Xử lý edge case nào?*
+> Dùng regex `(?<=[.!?])(?:\n| )` để tách câu theo các dấu `. `, `! `, `? `, `.`. Sau khi tách, dòng trắng thừa được strip và mỗi chunk được ghép lại bằng một khoảng trắng để giữ câu liền mạch.
 
 **`RecursiveChunker.chunk` / `_split`** — approach:
-> *Viết 2-3 câu: algorithm hoạt động thế nào? Base case là gì?*
+> Triển khai đệ quy với các separator theo thứ tự ưu tiên `\n\n`, `\n`, `. `, ` `, `""`. Nếu đoạn văn ngắn hơn `chunk_size` thì dừng, còn không thì tách theo separator hiện tại và gọi tiếp `_split` cho phần quá dài.
 
 ### EmbeddingStore
 
 **`add_documents` + `search`** — approach:
-> *Viết 2-3 câu: lưu trữ thế nào? Tính similarity ra sao?*
+> Mỗi document lưu thành record trong `_store`, gồm `id`, `content`, `metadata` và embedding tính từ `embedding_fn`. Khi search, tôi tạo embedding của câu hỏi rồi tính similarity bằng dot product giữa query và embedding record, sau đó sort giảm dần và trả về top-k.
 
 **`search_with_filter` + `delete_document`** — approach:
-> *Viết 2-3 câu: filter trước hay sau? Delete bằng cách nào?*
+> Filter trước theo `metadata_filter`, sau đó search similarity trên tập đã lọc. Delete bằng cách rebuild lại `_store` chỉ giữ record có `metadata['doc_id'] != doc_id` và trả về `True` nếu có xóa.
 
 ### KnowledgeBaseAgent
 
 **`answer`** — approach:
-> *Viết 2-3 câu: prompt structure? Cách inject context?*
+> Gọi `store.search(question, top_k)` để lấy chunks liên quan, sau đó xây prompt với từng chunk được đánh số. Cuối cùng prompt gồm context và câu hỏi được gửi vào `llm_fn` để lấy câu trả lời.
 
 ### Test Results
 
 ```
-# Paste output of: pytest tests/ -v
+$ pytest tests/ -v
+====================================== test session starts =======================================
+platform win32 -- Python 3.14.5, pytest-9.0.3, pluggy-1.6.0 -- C:\Users\phamd\AppData\Local\Programs\Python\Python314\python.exe
+cachedir: .pytest_cache
+rootdir: E:\AI20k\2A202600815-PhaamAnhDuong-day07
+plugins: anyio-4.13.0
+collected 42 items                                                                                
+
+tests/test_solution.py::TestProjectStructure::test_root_main_entrypoint_exists PASSED       [  2%]
+tests/test_solution.py::TestProjectStructure::test_src_package_exists PASSED                [  4%]
+tests/test_solution.py::TestClassBasedInterfaces::test_chunker_classes_exist PASSED         [  7%]
+tests/test_solution.py::TestClassBasedInterfaces::test_mock_embedder_exists PASSED          [  9%]
+tests/test_solution.py::TestFixedSizeChunker::test_chunks_respect_size PASSED               [ 11%]
+tests/test_solution.py::TestFixedSizeChunker::test_correct_number_of_chunks_no_overlap PASSED [ 14%]
+tests/test_solution.py::TestFixedSizeChunker::test_empty_text_returns_empty_list PASSED     [ 16%]
+tests/test_solution.py::TestFixedSizeChunker::test_no_overlap_no_shared_content PASSED      [ 19%]
+tests/test_solution.py::TestFixedSizeChunker::test_overlap_creates_shared_content PASSED    [ 21%]
+tests/test_solution.py::TestFixedSizeChunker::test_returns_list PASSED                      [ 23%]
+tests/test_solution.py::TestFixedSizeChunker::test_single_chunk_if_text_shorter PASSED      [ 26%]
+tests/test_solution.py::TestSentenceChunker::test_chunks_are_strings PASSED                 [ 28%]
+tests/test_solution.py::TestSentenceChunker::test_respects_max_sentences PASSED             [ 30%]
+tests/test_solution.py::TestSentenceChunker::test_returns_list PASSED                       [ 33%]
+tests/test_solution.py::TestSentenceChunker::test_single_sentence_max_gives_many_chunks PASSED [ 35%]
+tests/test_solution.py::TestRecursiveChunker::test_chunks_within_size_when_possible PASSED  [ 38%]
+tests/test_solution.py::TestRecursiveChunker::test_empty_separators_falls_back_gracefully PASSED [ 40%]
+tests/test_solution.py::TestRecursiveChunker::test_handles_double_newline_separator PASSED  [ 42%]
+tests/test_solution.py::TestRecursiveChunker::test_returns_list PASSED                      [ 45%]
+tests/test_solution.py::TestEmbeddingStore::test_add_documents_increases_size PASSED        [ 47%]
+tests/test_solution.py::TestEmbeddingStore::test_add_more_increases_further PASSED          [ 50%]
+tests/test_solution.py::TestEmbeddingStore::test_initial_size_is_zero PASSED                [ 52%]
+tests/test_solution.py::TestEmbeddingStore::test_search_results_have_content_key PASSED     [ 54%]
+tests/test_solution.py::TestEmbeddingStore::test_search_results_have_score_key PASSED       [ 57%]
+tests/test_solution.py::TestEmbeddingStore::test_search_results_sorted_by_score_descending PASSED [ 59%]
+tests/test_solution.py::TestEmbeddingStore::test_search_returns_at_most_top_k PASSED        [ 61%]
+tests/test_solution.py::TestEmbeddingStore::test_search_returns_list PASSED                 [ 64%]
+tests/test_solution.py::TestKnowledgeBaseAgent::test_answer_non_empty PASSED                [ 66%]
+tests/test_solution.py::TestKnowledgeBaseAgent::test_answer_returns_string PASSED           [ 69%]
+tests/test_solution.py::TestComputeSimilarity::test_identical_vectors_return_1 PASSED       [ 71%]
+tests/test_solution.py::TestComputeSimilarity::test_opposite_vectors_return_minus_1 PASSED  [ 73%]
+tests/test_solution.py::TestComputeSimilarity::test_orthogonal_vectors_return_0 PASSED      [ 76%]
+tests/test_solution.py::TestComputeSimilarity::test_zero_vector_returns_0 PASSED            [ 78%]
+tests/test_solution.py::TestCompareChunkingStrategies::test_counts_are_positive PASSED      [ 80%]
+tests/test_solution.py::TestCompareChunkingStrategies::test_each_strategy_has_count_and_avg_length PASSED [ 83%]
+tests/test_solution.py::TestCompareChunkingStrategies::test_returns_three_strategies PASSED [ 85%]
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_filter_by_department PASSED [ 88%]tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_no_filter_returns_all_candidates PASSED [ 90%]
+tests/test_solution.py::TestEmbeddingStoreSearchWithFilter::test_returns_at_most_top_k PASSED [ 92%]
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_reduces_collection_size PASSED [ 95%]
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_false_for_nonexistent_doc PASSED [ 97%]
+tests/test_solution.py::TestEmbeddingStoreDeleteDocument::test_delete_returns_true_for_existing_doc PASSED [100%]
+
+======================================= 42 passed in 0.13s =======================================
 ```
 
-**Số tests pass:** __ / __
+**Số tests pass:** 42 / 42
 
 ---
 
